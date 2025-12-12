@@ -1,0 +1,138 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: netflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-netflow_db}
+      POSTGRES_USER: ${DB_USER:-netflow_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-netflow_password}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - netflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-netflow_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  netflow-collector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: netflow-collector
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Настройки базы данных
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-netflow_db}
+      DB_USER: ${DB_USER:-netflow_user}
+      DB_PASSWORD: ${DB_PASSWORD:-netflow_password}
+      DB_SCHEMA: ${DB_SCHEMA:-netflow}
+      
+      # Настройки NetFlow
+      NETFLOW_PORT: ${NETFLOW_PORT:-2055}
+      BUFFER_SIZE: ${BUFFER_SIZE:-65535}
+      BATCH_SIZE: ${BATCH_SIZE:-1000}
+      FLUSH_INTERVAL: ${FLUSH_INTERVAL:-5}
+      
+      # Логирование
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FILE: /app/logs/netflow.log
+      
+      # Очистка
+      ENABLE_CLEANUP: ${ENABLE_CLEANUP:-false}
+      RETENTION_DAYS: ${RETENTION_DAYS:-30}
+      CLEANUP_SCHEDULE: ${CLEANUP_SCHEDULE:-"0 2 * * *"}
+      
+      # Дополнительные настройки
+      WAIT_FOR_DB: "true"
+      CHECK_DB_TABLES: "true"
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./config:/app/config:ro
+    ports:
+      - "${NETFLOW_PORT:-2055}:2055/udp"
+      - "9996:9996/udp"
+      - "8080:8080/tcp"
+    networks:
+      - netflow-network
+    healthcheck:
+      test: ["CMD", "python", "healthcheck.py"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    cap_add:
+      - NET_ADMIN  # Для raw socket (если понадобится)
+      - NET_RAW    # Для низкоуровневых сетевых операций
+
+  # Опционально: веб-интерфейс для просмотра статистики
+  netflow-web:
+    image: nginx:alpine
+    container_name: netflow-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./web/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./web/html:/usr/share/nginx/html:ro
+    depends_on:
+      - netflow-collector
+    networks:
+      - netflow-network
+
+  # Опционально: Prometheus для мониторинга
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - netflow-network
+
+  # Опционально: Grafana для визуализации
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - netflow-network
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  netflow-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
