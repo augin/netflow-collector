@@ -61,7 +61,7 @@ services:
       CHECK_DB_TABLES: "true"
       TZ: ${TZ:-UTC}
     volumes:
-      - /var/log/netflow:/app/logs
+      - ./logs:/app/logs
       - ./data:/app/data
       - ./config:/app/config:ro
     ports:
