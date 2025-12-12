@@ -163,3 +163,6 @@ GRANT ALL ON TABLES TO netflow_user;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA netflow 
 GRANT ALL ON SEQUENCES TO netflow_user;
+
+ALTER USER netflow_user WITH PASSWORD 'your_strong_password_here';
+
