@@ -13,7 +13,7 @@ cp .env.example .env
 # 3. Соберите и запустите
 ```
 mkdir logs
-chmod 666 logs
+chmod 777 logs
 docker compose up --build -d
 ```
 
