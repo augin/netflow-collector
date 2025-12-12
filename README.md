@@ -1,6 +1,6 @@
 # 1. Клонируйте проект
-git clone [<repository>](https://github.com/augin/netflow-collector.git)
-cd netflow-collector
+  git clone [<repository>](https://github.com/augin/netflow-collector.git)
+  cd netflow-collector
 
 # 2. Создайте .env файл (или используйте существующий)
 cp .env.example .env
