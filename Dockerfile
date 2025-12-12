@@ -1,22 +1,12 @@
-# netflow-collector/Dockerfile.micro
-FROM python:3.11-slim-buster
+# netflow-collector/Dockerfile
+FROM python:3.11-slim AS builder
 
-# Метаданные
-LABEL org.opencontainers.image.title="NetFlow Collector"
-LABEL org.opencontainers.image.description="Collects NetFlow data and stores in PostgreSQL"
-LABEL org.opencontainers.image.version="1.0.0"
-LABEL org.opencontainers.image.authors="NetFlow Team"
-
-# Устанавливаем зависимости
+# Устанавливаем системные зависимости
 RUN apt-get update && apt-get install -y \
-    libpq5 \
-    curl \
-    gnupg \
-    lsb-release \
+    gcc \
+    g++ \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
-
-# Добавляем ключ для PostgreSQL
-RUN curl https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
 
 WORKDIR /app
 
@@ -24,30 +14,59 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Устанавливаем Python зависимости
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --user -r requirements.txt
 
-# Копируем код
-COPY netflow_collector.py .
-COPY cleanup_db.py .
-COPY utils/ ./utils/
-COPY config/ ./config/
+# Финальный образ
+FROM python:3.11-slim
 
-# Копируем конфигурационные файлы
-COPY docker-entrypoint.sh .
-COPY healthcheck.py .
-COPY prometheus.yml .
+# Устанавливаем только runtime зависимости
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    net-tools \
+    iproute2 \
+    && rm -rf /var/lib/apt/lists/*
 
-# Делаем скрипты исполняемыми
-RUN chmod +x docker-entrypoint.sh healthcheck.py
+# Создаем пользователя для безопасности
+RUN groupadd -r netflow && useradd -r -g netflow netflow
 
-# Создаем пользователя
-RUN useradd -m -u 1000 netflow && \
+WORKDIR /app
+
+# Копируем установленные пакеты из builder
+COPY --from=builder /root/.local /root/.local
+
+# Копируем исходный код
+COPY . .
+
+# Устанавливаем пути Python
+ENV PATH=/root/.local/bin:$PATH
+ENV PYTHONPATH=/app:$PYTHONPATH
+
+# Создаем директории для логов и данных
+RUN mkdir -p /app/logs /app/data && \
     chown -R netflow:netflow /app
 
 USER netflow
 
-# Порт для NetFlow и метрик
-EXPOSE 2055/udp 9996/udp 9090/tcp
+# Открываем порт для NetFlow (обычно 2055 или 9996)
+EXPOSE 2055/udp
+EXPOSE 9996/udp
+EXPOSE 8080/tcp
 
-# Точка входа
-ENTRYPOINT ["./docker-entrypoint.sh"]
+# Переменные окружения по умолчанию
+ENV NETFLOW_PORT=2055
+ENV LOG_LEVEL=INFO
+ENV LOG_FILE=/app/logs/netflow.log
+ENV DB_HOST=postgres
+ENV DB_PORT=5432
+ENV DB_NAME=netflow_db
+ENV DB_USER=netflow_user
+ENV DB_PASSWORD=netflow_password
+ENV DB_SCHEMA=netflow
+
+# Health check для мониторинга
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD python -c "import socket; sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); \
+    sock.settimeout(2); sock.bind(('0.0.0.0', 0)); sock.close()" || exit 1
+
+# Команда по умолчанию
+CMD ["python", "netflow_collector.py"]
