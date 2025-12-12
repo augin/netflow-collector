@@ -1,0 +1,445 @@
+<!-- web/html/index.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetFlow Collector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            color: white;
+        }
+
+        header h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+
+        .service-list {
+            list-style: none;
+        }
+
+        .service-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .service-item:last-child {
+            border-bottom: none;
+        }
+
+        .service-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .status {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .status.running {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.stopped {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+            margin: 0.5rem 0;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 600;
+            transition: background 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            color: white;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .api-links {
+            margin-top: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .api-links h3 {
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        .api-links ul {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .api-links a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .api-links a:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 5px;
+            color: white;
+            font-weight: 600;
+            display: none;
+            z-index: 1000;
+        }
+
+        .notification.success {
+            background: #28a745;
+        }
+
+        .notification.error {
+            background: #dc3545;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            header h1 {
+                font-size: 2rem;
+            }
+            
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="notification" id="notification"></div>
+
+    <div class="container">
+        <header>
+            <h1>NetFlow Collector</h1>
+            <p>Система сбора и анализа сетевого трафика</p>
+        </header>
+
+        <div class="dashboard">
+            <div class="card">
+                <h2>Статус сервисов</h2>
+                <ul class="service-list" id="services">
+                    <!-- Заполняется JavaScript -->
+                    <li class="service-item">
+                        <span class="service-name">Загрузка...</span>
+                        <span class="status">⏳</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2>Статистика</h2>
+                <div class="stats-grid" id="stats">
+                    <!-- Заполняется JavaScript -->
+                    <div class="stat-item">
+                        <div class="stat-label">Загрузка...</div>
+                        <div class="stat-value">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Быстрые ссылки</h2>
+                <div class="actions">
+                    <a href="/api/metrics" class="btn" target="_blank">Метрики</a>
+                    <a href="/api/health" class="btn" target="_blank">Health Check</a>
+                    <a href="/api/stats" class="btn" target="_blank">Статистика</a>
+                    <button class="btn btn-secondary" onclick="refreshData()">Обновить</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="api-links">
+            <h3>API Endpoints</h3>
+            <ul>
+                <li><a href="/api/health" target="_blank">/api/health</a></li>
+                <li><a href="/api/metrics" target="_blank">/api/metrics</a></li>
+                <li><a href="/api/stats" target="_blank">/api/stats</a></li>
+                <li><a href="/api/flows/recent" target="_blank">/api/flows/recent</a></li>
+                <li><a href="/api/exporters" target="_blank">/api/exporters</a></li>
+                <li><a href="/api/top/talkers" target="_blank">/api/top/talkers</a></li>
+            </ul>
+        </div>
+
+        <footer>
+            <p>NetFlow Collector v1.0.0 | <span id="current-time"></span></p>
+            <p>Для настройки маршрутизатора используйте порт: <strong>2055</strong></p>
+        </footer>
+    </div>
+
+    <script>
+        // Обновление времени
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('ru-RU', {
+                timeZone: 'UTC',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('current-time').textContent = timeString + ' UTC';
+        }
+
+        // Показать уведомление
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 5000);
+        }
+
+        // Загрузка статуса сервисов
+        async function loadServices() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                
+                const servicesList = document.getElementById('services');
+                servicesList.innerHTML = '';
+                
+                const services = [
+                    { name: 'NetFlow Collector', status: data.collector || 'unknown' },
+                    { name: 'База данных', status: data.database || 'unknown' },
+                    { name: 'UDP Socket', status: data.udp_socket || 'unknown' }
+                ];
+                
+                services.forEach(service => {
+                    const li = document.createElement('li');
+                    li.className = 'service-item';
+                    
+                    const statusClass = service.status === 'healthy' ? 'running' : 'stopped';
+                    const statusText = service.status === 'healthy' ? 'Работает' : 'Остановлен';
+                    
+                    li.innerHTML = `
+                        <span class="service-name">${service.name}</span>
+                        <span class="status ${statusClass}">${statusText}</span>
+                    `;
+                    
+                    servicesList.appendChild(li);
+                });
+                
+            } catch (error) {
+                console.error('Error loading services:', error);
+                showNotification('Ошибка загрузки статуса сервисов', 'error');
+            }
+        }
+
+        // Загрузка статистики
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                
+                const statsGrid = document.getElementById('stats');
+                statsGrid.innerHTML = '';
+                
+                const stats = [
+                    { label: 'Всего потоков', value: data.total_flows || 0 },
+                    { label: 'Всего трафика', value: formatBytes(data.total_bytes || 0) },
+                    { label: 'Уникальных IP', value: data.unique_ips || 0 },
+                    { label: 'Экспортеров', value: data.exporters_count || 0 }
+                ];
+                
+                stats.forEach(stat => {
+                    const div = document.createElement('div');
+                    div.className = 'stat-item';
+                    div.innerHTML = `
+                        <div class="stat-label">${stat.label}</div>
+                        <div class="stat-value">${stat.value}</div>
+                    `;
+                    statsGrid.appendChild(div);
+                });
+                
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                showNotification('Ошибка загрузки статистики', 'error');
+            }
+        }
+
+        // Форматирование байтов
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Обновление всех данных
+        async function refreshData() {
+            showNotification('Обновление данных...', 'success');
+            await Promise.all([loadServices(), loadStats()]);
+            showNotification('Данные обновлены', 'success');
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            updateTime();
+            refreshData();
+            
+            // Обновляем время каждую секунду
+            setInterval(updateTime, 1000);
+            
+            // Автообновление каждые 30 секунд
+            setInterval(refreshData, 30000);
+        });
+    </script>
+</body>
+</html>
