@@ -7,16 +7,16 @@ cp .env.example .env
 # Отредактируйте .env файл
 
 # 3. Соберите и запустите
-docker-compose up --build -d
+docker compose up --build -d
 
 # 4. Проверьте статус
-docker-compose ps
+docker compose ps
 
 # 5. Просмотрите логи
-docker-compose logs -f netflow-collector
+docker compose logs -f netflow-collector
 
 # 6. Остановите контейнеры
-docker-compose down
+docker compose down
 
 # Или используйте Makefile
 make build
@@ -35,7 +35,7 @@ print(f'Received {len(data)} bytes from {addr}')
 "
 
 # Проверьте базу данных
-docker-compose exec postgres psql -U netflow_user -d netflow_db -c "SELECT COUNT(*) FROM netflow.flows;"
+docker compose exec postgres psql -U netflow_user -d netflow_db -c "SELECT COUNT(*) FROM netflow.flows;"
 
 # Проверьте метрики
 curl http://localhost:8080/metrics
