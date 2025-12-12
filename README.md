@@ -6,11 +6,14 @@ cd netflow-collector
 
 # 2. Создайте .env файл (или используйте существующий)
 ```
-cp .env.example .env```
+cp .env.example .env
+```
 # Отредактируйте .env файл
 
 # 3. Соберите и запустите
-```docker compose up --build -d```
+```
+docker compose up --build -d
+```
 
 # 4. Проверьте статус
 docker compose ps
