@@ -335,7 +335,7 @@ class NetFlowCollector:
             logger.debug("Нет потоков для сохранения")
             return
 
-        logger.info(f"Попытка сохранить {len(flows)} потоков в БД")
+        logger.debug(f"Попытка сохранить {len(flows)} потоков в БД")
 
         try:
             insert_sql = """
@@ -376,7 +376,7 @@ class NetFlowCollector:
 
             self.stats['flows_processed'] += len(flows)
 
-            logger.info(f"Успешно сохранено {len(flows)} потоков от {exporter_ip}")
+            logger.debug(f"Успешно сохранено {len(flows)} потоков от {exporter_ip}")
 
         except Exception as e:
             logger.error(f"Ошибка сохранения потоков в БД: {e}")
@@ -388,7 +388,7 @@ class NetFlowCollector:
     def save_flows_one_by_one(self, flows: List[Dict]):
         """Сохранение потоков по одному (fallback)"""
         saved = 0
-        logger.info(f"Попытка сохранить {len(flows)} потоков по одному...")
+        logger.debug(f"Попытка сохранить {len(flows)} потоков по одному...")
 
         for flow in flows:
             try:
@@ -417,7 +417,7 @@ class NetFlowCollector:
 
         if saved > 0:
             self.conn.commit()
-            logger.info(f"Сохранено {saved}/{len(flows)} потоков по одному")
+            logger.debug(f"Сохранено {saved}/{len(flows)} потоков по одному")
         else:
             logger.error("Не удалось сохранить ни одного потока!")
 
@@ -486,7 +486,7 @@ class NetFlowCollector:
                 # Периодическое сохранение
                 if len(batch) >= self.batch_size or (datetime.now() - self.stats['last_flush']).seconds > self.flush_interval:
                     if batch:
-                        logger.info(f"Сохранение batch из {len(batch)} потоков...")
+                        logger.debug(f"Сохранение batch из {len(batch)} потоков...")
                         self.save_flows_to_db(batch)
                         batch = []
                     self.stats['last_flush'] = datetime.now()
@@ -496,7 +496,7 @@ class NetFlowCollector:
             except queue.Empty:
                 # Сохраняем остатки
                 if batch:
-                    logger.info(f"Сохраняем остатки batch из {len(batch)} потоков...")
+                    logger.debug(f"Сохраняем остатки batch из {len(batch)} потоков...")
                     self.save_flows_to_db(batch)
                     batch = []
                 continue
@@ -511,7 +511,7 @@ class NetFlowCollector:
             try:
                 time.sleep(30)
 
-                logger.info(f"""
+                logger.debug(f"""
                 === СТАТИСТИКА ===
                 Пакетов получено: {self.stats['packets_received']}
                 Потоков обработано: {self.stats['flows_processed']}
@@ -528,7 +528,7 @@ class NetFlowCollector:
         try:
             self.cursor.execute("SELECT 1 as test")
             result = self.cursor.fetchone()
-            logger.info(f"Тест подключения к БД: {result['test']}")
+            logger.debug(f"Тест подключения к БД: {result['test']}")
             return True
         except Exception as e:
             logger.error(f"Тест подключения к БД не пройден: {e}")
