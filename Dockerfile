@@ -33,10 +33,10 @@ RUN groupadd -r netflow && useradd -r -g netflow netflow
 WORKDIR /app
 
 # Копируем установленные пакеты из builder
-COPY --from=builder /root/.local /root/.local
+COPY --from=builder /root/.local /home/netflow/.local
 
 # Копируем исходный код
-COPY . .
+COPY --chown=netflow:netflow . .
 
 # Устанавливаем пути Python
 ENV PATH=/root/.local/bin:$PATH
