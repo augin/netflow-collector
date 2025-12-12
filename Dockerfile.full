@@ -1,0 +1,67 @@
+# netflow-collector/Dockerfile.full
+FROM python:3.11-alpine
+
+LABEL maintainer="NetFlow Collector Team"
+LABEL version="1.0.0"
+LABEL description="NetFlow Collector with PostgreSQL storage"
+
+# Устанавливаем системные зависимости
+RUN apk add --no-cache \
+    postgresql-dev \
+    gcc \
+    musl-dev \
+    linux-headers \
+    net-tools \
+    tcpdump \
+    curl \
+    bash
+
+WORKDIR /app
+
+# Копируем зависимости
+COPY requirements.txt .
+
+# Устанавливаем Python зависимости
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Копируем исходный код
+COPY . .
+
+# Создаем директории
+RUN mkdir -p /app/logs /app/data /app/config && \
+    addgroup -S netflow && adduser -S netflow -G netflow && \
+    chown -R netflow:netflow /app
+
+USER netflow
+
+# Открываем порты
+# 2055 - стандартный порт NetFlow v5/v7
+# 9996 - стандартный порт NetFlow v9/IPFIX
+# 8080 - для метрик/мониторинга
+EXPOSE 2055/udp 9996/udp 8080/tcp
+
+# Переменные окружения
+ENV PYTHONUNBUFFERED=1
+ENV TZ=UTC
+ENV NETFLOW_PORT=2055
+ENV BUFFER_SIZE=65535
+ENV BATCH_SIZE=1000
+ENV FLUSH_INTERVAL=5
+ENV LOG_LEVEL=INFO
+ENV LOG_FILE=/app/logs/netflow.log
+ENV DB_HOST=postgres
+ENV DB_PORT=5432
+ENV DB_NAME=netflow_db
+ENV DB_USER=netflow_user
+ENV DB_PASSWORD=netflow_password
+ENV DB_SCHEMA=netflow
+ENV RETENTION_DAYS=30
+ENV ENABLE_CLEANUP=false
+ENV CLEANUP_SCHEDULE="0 2 * * *"
+
+# Health check
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Точка входа
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
