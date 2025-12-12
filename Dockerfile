@@ -4,12 +4,12 @@ FROM python:3.11-slim AS builder
 WORKDIR /app
 
 # Устанавливаем системные зависимости
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    libpq-dev \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+#RUN apt-get update && apt-get install -y \
+#    gcc \
+#    g++ \
+#    libpq-dev \
+#    curl \
+#    && rm -rf /var/lib/apt/lists/*
 
 # Копируем зависимости
 COPY requirements.txt .
@@ -21,11 +21,11 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 FROM python:3.11-slim
 
 # Устанавливаем только runtime зависимости
-RUN apt-get update && apt-get install -y \
-    libpq5 \
-    net-tools \
-    iproute2 \
-    && rm -rf /var/lib/apt/lists/*
+#RUN apt-get update && apt-get install -y \
+#    libpq5 \
+#    net-tools \
+#    iproute2 \
+#    && rm -rf /var/lib/apt/lists/*
 
 # Создаем пользователя для безопасности
 RUN groupadd -r netflow && useradd -r -g netflow netflow
